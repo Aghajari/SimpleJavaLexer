@@ -20,14 +20,15 @@ const std::vector<std::string> java_keywords = {
 
 const std::vector<char> java_operators_starter = {
         '=', '!', '<', '>', '+', '-', '*', '/',
-        '&', '~', '|', '%',
+        '&', '~', '|', '%', '^',
 };
 
 const std::vector<std::string> java_operators = {
         "!=", "=", "==", "<", ">", ">=", "<=", "~=",
         "/=", "*=", "+=", "-=", "-", "+", "*", "/",
         "!", "~", "^", "&", "^=", "|", "|=", "&=",
-        "%", "%=", "&&", "||",
+        "%", "%=", "&&", "||", "++", "--", "<<", ">>",
+        "<<=", ">>=",
 };
 
 const std::vector<std::string> java_symbols = {
