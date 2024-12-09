@@ -324,13 +324,13 @@ void consumeLiteralChar(
  *      - If `word` is '!' and `c` is '=', parsing continues to form '!='.
  *      - If `word` is '!' and `c` is '+', parsing stops, and '!' is finalized as a separate token.
  *
- * 2. `c != word.back()`
+ * 2. `c != prev_c`
  *    - Ensures repeated characters like '++' or '--' are valid operators but prevents unexpected repetitions.
  *    - Example:
  *      - If `word` is '+' and `c` is '+', parsing continues to form '++'.
  *      - If `word` is '+' and `c` is '-', parsing stops, and '+' is finalized as a token.
  *
- * 3. `!(word.back() == '-' && c == '>')`
+ * 3. `!(prev_c == '-' && c == '>')`
  *    - Special case to allow the lambda operator '->', which consists of '-' followed by '>'.
  *    - Example:
  *      - If `word` is '-' and `c` is '>', parsing continues to form '->'.
