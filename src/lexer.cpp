@@ -387,8 +387,14 @@ bool consumeNumber(
         char c,
         char next_c
 ) {
+    std::string underscore = consumeUnderscoreInNumber(source, position.index, false, false);
+    if (!underscore.empty()) {
+        word += underscore;
+        position.index += (int) underscore.size() - 1;
+        return true;
+    }
+
     if (isNumber(c) ||
-        isValidUnderscoreInNumber(source, position.index, false, false) ||
         (numberInfo.hasUsedE && (prev_c == 'e' || prev_c == 'E') && (c == '-' || c == '+'))) {
         word += c;
         return true;
@@ -445,9 +451,14 @@ bool consumeHexAndBinary(
         char c,
         bool isBinary
 ) {
+    std::string underscore = consumeUnderscoreInNumber(source, position.index, isBinary, !isBinary);
+    if (!underscore.empty()) {
+        word += underscore;
+        position.index += (int) underscore.size() - 1;
+        return true;
+    }
 
     if (word.size() == 1 || // allow '0x' or '0b' prefixes
-        isValidUnderscoreInNumber(source, position.index, isBinary, !isBinary) ||
         isHexOrBinaryNumber(c, isBinary)) {
         word += c;
         return true;

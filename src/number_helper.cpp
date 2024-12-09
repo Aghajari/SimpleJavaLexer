@@ -32,27 +32,30 @@ bool isNumberInRange(char c, bool isBinary, bool isHex) {
     }
 }
 
-bool isValidUnderscoreInNumber(const std::string &source, int index, bool isBinary, bool isHex) {
-    if (source[index] != '_') {
-        return false;
+std::string consumeUnderscoreInNumber(
+        const std::string &source,
+        int index,
+        bool isBinary,
+        bool isHex
+) {
+    if (index == 0 || source[index] != '_') {
+        return "";
     }
-    int prevIndex = index - 1;
-    while (prevIndex >= 0) {
-        if (source[prevIndex] == '_') {
-            prevIndex--;
-        } else if (isNumberInRange(source[prevIndex], isBinary, isHex)) {
-            break;
-        } else {
-            return false;
-        }
+    if (!isNumberInRange(source[index - 1], isBinary, isHex)) {
+        return "";
     }
+    std::string consumedString{source[index]};
     int nextIndex = index + 1;
     while (nextIndex < source.length()) {
         if (source[nextIndex] == '_') {
+            consumedString += '_';
             nextIndex++;
+        } else if (isNumberInRange(source[nextIndex], isBinary, isHex)) {
+            consumedString += source[nextIndex];
+            return consumedString;
         } else {
-            return isNumberInRange(source[nextIndex], isBinary, isHex);
+            return "";
         }
     }
-    return false;
+    return "";
 }

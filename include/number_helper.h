@@ -48,19 +48,25 @@ bool isNumberStarter(char c, char next_c);
 bool isNumberInRange(char c, bool isBinary, bool isHex);
 
 /**
- * Validates the use of an underscore in a number.
- * In Java, underscores are allowed in numbers but cannot:
- * - Appear at the start or end of the number.
- * - Appear next to a decimal point.
- * - Be consecutive without digits in between.
+ * Consumes underscores in a number sequence and validates their placement.
  *
- * This function ensures that the underscore at the given index is valid in the context of the number.
- * @param source - The string containing the number.
- * @param index - The position of the underscore in the string.
- * @param isBinary - true if the number is binary.
- * @param isHex - true if the number is hexadecimal.
- * @return true if the underscore is valid in the number; false otherwise.
+ * This function checks for underscores (`_`) in numeric literals, ensuring they are correctly placed
+ * and conform to Java's syntax rules. Unlike the previous implementation, this optimized version
+ * avoids quadratic complexity by consuming all forward underscores at once and validating their usage
+ * in a single pass.
+ *
+ * Key Behavior:
+ * - The first `_` encountered must follow a valid numeric character.
+ * - Subsequent underscores are consumed in a single forward traversal.
+ * - The function ensures there is at least one valid numeric character after the underscores.
+ *
+ * @param source The source code string being tokenized.
+ * @param index The current position of the `_` in the string.
+ * @param isBinary A flag indicating whether the number is in binary format.
+ * @param isHex A flag indicating whether the number is in hexadecimal format.
+ * @return A string containing the consumed valid numeric segment with underscores, or an empty
+ *         string if the underscores are invalid.
  */
-bool isValidUnderscoreInNumber(const std::string &source, int index, bool isBinary, bool isHex);
+std::string consumeUnderscoreInNumber(const std::string &source, int index, bool isBinary, bool isHex);
 
 #endif //SIMPLEJAVALEXER_NUMBER_HELPER_H
