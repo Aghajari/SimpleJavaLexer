@@ -307,6 +307,35 @@ void consumeLiteralChar(
 }
 
 /**
+ * Explanation:
+ *
+ * 1. `c != '='`
+ *    - Ensures operators expecting '=' as the next character (e.g., '==', '!=', '+=', '-=') are handled properly.
+ *    - Example:
+ *      - If `word` is '!' and `c` is '=', parsing continues to form '!='.
+ *      - If `word` is '!' and `c` is '+', parsing stops, and '!' is finalized as a separate token.
+ *
+ * 2. `c != word.back()`
+ *    - Ensures repeated characters like '++' or '--' are valid operators but prevents unexpected repetitions.
+ *    - Example:
+ *      - If `word` is '+' and `c` is '+', parsing continues to form '++'.
+ *      - If `word` is '+' and `c` is '-', parsing stops, and '+' is finalized as a token.
+ *
+ * 3. `!(word.back() == '-' && c == '>')`
+ *    - Special case to allow the lambda operator '->', which consists of '-' followed by '>'.
+ *    - Example:
+ *      - If `word` is '-' and `c` is '>', parsing continues to form '->'.
+ *      - If `word` is '-' and `c` is '+', parsing stops, and '-' is finalized as a token.
+ *
+ * Purpose:
+ * - Handles complex sequences like `a--+-b` by ensuring `--`, `+`, and `-` are treated as separate operators.
+ * - Prevents invalid combinations or merging of operators.
+ **/
+bool isUnmatchedOperator(char prev_c, char c) {
+    return c != '=' && c != prev_c && !(prev_c == '-' && c == '>');
+}
+
+/**
  * Processes operators (e.g., `+`, `+=`, `&&`).
  *
  * This function is used when the lexer is in the `STATE_OPERATORS` state. It accumulates
@@ -327,6 +356,7 @@ void consumeLiteralChar(
  * @param word Accumulated characters of the operator.
  * @param state Current tokenizer state.
  * @param c Current character.
+  * @param next_c Next character in the source, Used to identify comment openings.
  * @return true if the character was consumed as part of the operator; false otherwise.
  */
 bool consumeOperator(
@@ -334,10 +364,29 @@ bool consumeOperator(
         struct Position &position,
         std::string &word,
         TokenizerState &state,
-        char c
+        char c,
+        char next_c
 ) {
-    std::string c_str{c};
-    if (isOperatorStart(c_str)) {
+    // Checks if the current character (`c`) starts a comment,
+    // either single-line (`//`) or block (`/*`).
+    bool isFollowingByComment = c == '/' && (next_c == '/' || next_c == '*');
+
+    // Checks if the current word represents a lambda symbol (`->`).
+    bool isLambdaSymbol = word == "->";
+
+    // Checks if the current word is an increment (`++`) or decrement (`--`) operator.
+    bool isIncreaseDecrease = word == "++" || word == "--";
+
+    // Checks if the current character (`c`) doesn't match the expected continuation of the operator
+    // (e.g., for `==`, `!=`, `+=`, or `->`), ensuring no unmatched operators.
+    bool isUnmatched = isUnmatchedOperator(word.back(), c);
+
+    bool canContinue = !isFollowingByComment &&
+                       !isLambdaSymbol &&
+                       !isIncreaseDecrease &&
+                       !isUnmatched;
+
+    if (canContinue && isOperatorStart(std::string{c})) {
         word += c;
         return true;
     } else {
@@ -545,7 +594,7 @@ std::vector<Token> tokenize(const std::string &source) {
                 consumeLiteralChar(tokens, position, word, currentState, c, prev_c);
                 break;
             case TokenizerState::STATE_OPERATORS:
-                hasConsumed = consumeOperator(tokens, position, word, currentState, c);
+                hasConsumed = consumeOperator(tokens, position, word, currentState, c, next_c);
                 break;
             case TokenizerState::STATE_NUMBERS:
                 hasConsumed = consumeNumber(source, tokens, position, word,
