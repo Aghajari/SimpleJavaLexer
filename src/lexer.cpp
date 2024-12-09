@@ -17,7 +17,6 @@ enum TokenizerState {
     STATE_NUMBERS,         // Parsing numbers.
     STATE_HEX,             // Parsing a hexadecimal number.
     STATE_BINARY,          // Parsing a binary number.
-    STATE_DOUBLE_COLON     // Parsing a double-colon (::).
 };
 
 /**
@@ -50,8 +49,6 @@ struct NumberInfo {
  *   - Processes operators and symbols like `+`, `->`, `;` by emitting tokens or transitioning to `STATE_OPERATORS`.
  *   - Recognizes whitespace and emits a `WHITESPACE` token.
  *   - Identifies identifiers (e.g., variable names, keywords) and transitions to `STATE_WORD`.
- * - Special Cases:
- *   - Handles `::` (double colon), transitioning to `STATE_DOUBLE_COLON`.
  *
  * @param tokens Reference to the vector where generated tokens are stored.
  * @param position Current position in the source code, used to track the location of the token.
@@ -88,23 +85,24 @@ void consume(
     } else if (isOperatorStart(word)) {
         state = TokenizerState::STATE_OPERATORS;
     } else if (isSymbol(word)) {
-        if (c == ':' && next_c == ':') {
+        bool isDoubleColon = c == ':' && next_c == ':';
+        if (isDoubleColon) {
             word += next_c;
-            state = STATE_DOUBLE_COLON;
+            position.index++;
         }
-        tokens.emplace_back(TokenType::SYMBOL, word, position);
+        tokens.emplace_back(TokenType::SYMBOL, word, position, 1);
         position.column += (int) word.size();
         word = "";
     } else if (isWhitespace(word)) {
         if (!tokens.empty() && tokens.back().type != WHITESPACE) {
-            tokens.emplace_back(TokenType::WHITESPACE, word, position);
+            tokens.emplace_back(TokenType::WHITESPACE, word, position, 0);
         }
         position.column += (int) word.size();
         word = "";
     } else if (isIdentifier(word)) {
         state = TokenizerState::STATE_WORD;
     } else {
-        tokens.emplace_back(TokenType::UNKNOWN, word, position);
+        tokens.emplace_back(TokenType::UNKNOWN, word, position, 0);
         position.column += (int) word.size();
         word = "";
     }
@@ -141,7 +139,7 @@ bool consumeWord(
         word += c;
         return true;
     } else {
-        tokens.emplace_back(getTokenType(word), word, position);
+        tokens.emplace_back(getTokenType(word), word, position, word.size());
         position.column += (int) word.size();
         word = "";
         state = TokenizerState::STATE_NONE;
@@ -174,7 +172,7 @@ void consumeLineComment(
         char c
 ) {
     if (c == '\n') {
-        tokens.emplace_back(TokenType::LINE_COMMENT, word, position);
+        tokens.emplace_back(TokenType::LINE_COMMENT, word, position, word.size());
         position.column += (int) word.size();
         word = "";
         state = TokenizerState::STATE_NONE;
@@ -215,7 +213,7 @@ void consumeBlockComment(
     word += c;
     position.column++;
     if (prev_c == '*' && c == '/') {
-        tokens.emplace_back(TokenType::BLOCK_COMMENT, word, startPosition);
+        tokens.emplace_back(TokenType::BLOCK_COMMENT, word, startPosition, 0);
         word = "";
         state = TokenizerState::STATE_NONE;
     }
@@ -249,7 +247,7 @@ void consumeLiteralString(
         char prev_c
 ) {
     if (c == '\n') {
-        tokens.emplace_back(TokenType::UNKNOWN, word, position);
+        tokens.emplace_back(TokenType::UNKNOWN, word, position, word.size());
         word = "";
         state = TokenizerState::STATE_NONE;
         return;
@@ -257,7 +255,7 @@ void consumeLiteralString(
 
     word += c;
     if (prev_c != '\\' && c == '"') {
-        tokens.emplace_back(TokenType::STRING, word, position);
+        tokens.emplace_back(TokenType::STRING, word, position, word.size() - 1);
         position.column += (int) word.size();
         word = "";
         state = TokenizerState::STATE_NONE;
@@ -293,7 +291,7 @@ void consumeLiteralChar(
         char prev_c
 ) {
     if (c == '\n') {
-        tokens.emplace_back(TokenType::UNKNOWN, word, position);
+        tokens.emplace_back(TokenType::UNKNOWN, word, position, word.size());
         word = "";
         state = TokenizerState::STATE_NONE;
         return;
@@ -301,7 +299,7 @@ void consumeLiteralChar(
 
     word += c;
     if (prev_c != '\\' && c == '\'') {
-        tokens.emplace_back(TokenType::CHAR, word, position);
+        tokens.emplace_back(TokenType::CHAR, word, position, word.size() - 1);
         position.column += (int) word.size();
         word = "";
         state = TokenizerState::STATE_NONE;
@@ -343,7 +341,7 @@ bool consumeOperator(
         word += c;
         return true;
     } else {
-        tokens.emplace_back(getTokenType(word), word, position);
+        tokens.emplace_back(getTokenType(word), word, position, word.size());
         position.column += (int) word.size();
         word = "";
         state = TokenizerState::STATE_NONE;
@@ -412,7 +410,7 @@ bool consumeNumber(
         if (isType) {
             word += c;
         }
-        tokens.emplace_back(TokenType::NUMBER, word, position);
+        tokens.emplace_back(TokenType::NUMBER, word, position, word.size() - isType);
         position.column += (int) word.size();
         word = "";
         state = TokenizerState::STATE_NONE;
@@ -468,7 +466,8 @@ bool consumeHexAndBinary(
             word += c;
         }
         TokenType type = isBinary ? TokenType::BINARY_NUMBER : TokenType::HEX_NUMBER;
-        tokens.emplace_back(word.size() >= (isType ? 4 : 3) ? type : TokenType::UNKNOWN, word, position);
+        type = word.size() >= (isType ? 4 : 3) ? type : TokenType::UNKNOWN;
+        tokens.emplace_back(type, word, position, word.size() - isType);
         position.column += (int) word.size();
         word = "";
         state = TokenizerState::STATE_NONE;
@@ -557,10 +556,6 @@ std::vector<Token> tokenize(const std::string &source) {
                 break;
             case TokenizerState::STATE_BINARY:
                 hasConsumed = consumeHexAndBinary(source, tokens, position, word, currentState, c, true);
-                break;
-            case TokenizerState::STATE_DOUBLE_COLON:
-                // already processed in the previous consume
-                currentState = STATE_NONE;
                 break;
         }
         if (!hasConsumed) {

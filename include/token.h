@@ -45,10 +45,13 @@ public:
     Token(
             TokenType type,
             std::string lex,
-            struct Position position
+            struct Position position,
+            int indexOffset
     ) : type(type),
         lexeme(std::move(lex)),
-        position(position) {}
+        position(position) {
+        this->position.index -= (int) indexOffset;
+    }
 
     /**
      * Returns the name of the token type as a string.
