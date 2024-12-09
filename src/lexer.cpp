@@ -200,6 +200,7 @@ void consumeLineComment(
  * @param state Current tokenizer state.
  * @param c Current character.
  * @param prev_c Previous character, used to detect the closing `* /`.
+ * @param isEOF true if processing final character.
  */
 void consumeBlockComment(
         std::vector<Token> &tokens,
@@ -208,12 +209,20 @@ void consumeBlockComment(
         std::string &word,
         TokenizerState &state,
         char c,
-        char prev_c
+        char prev_c,
+        bool isEOF
 ) {
-    word += c;
-    position.column++;
-    if (prev_c == '*' && c == '/') {
+    bool isClosing = prev_c == '*' && c == '/';
+    if (!isEOF || isClosing) {
+        word += c;
+        position.column++;
+    }
+    if (isClosing) {
         tokens.emplace_back(TokenType::BLOCK_COMMENT, word, startPosition, 0);
+        word = "";
+        state = TokenizerState::STATE_NONE;
+    } else if (isEOF) {
+        tokens.emplace_back(TokenType::UNKNOWN, word, startPosition, 0);
         word = "";
         state = TokenizerState::STATE_NONE;
     }
@@ -556,6 +565,7 @@ std::vector<Token> tokenize(const std::string &source) {
 
     TokenizerState currentState = STATE_NONE;
     char prev_c = '\0';
+    bool isEOF = false;
 
     while (source.length() > position.index) {
         char c = source[position.index];
@@ -585,7 +595,8 @@ std::vector<Token> tokenize(const std::string &source) {
                 consumeLineComment(tokens, position, word, currentState, c);
                 break;
             case TokenizerState::STATE_BLOCK_COMMENT:
-                consumeBlockComment(tokens, position, blockCommentPositionSaver, word, currentState, c, prev_c);
+                consumeBlockComment(tokens, position, blockCommentPositionSaver, word,
+                                    currentState, c, prev_c, isEOF);
                 break;
             case TokenizerState::STATE_LITERAL_STRING:
                 consumeLiteralString(tokens, position, word, currentState, c, prev_c);
@@ -607,7 +618,7 @@ std::vector<Token> tokenize(const std::string &source) {
                 hasConsumed = consumeHexAndBinary(source, tokens, position, word, currentState, c, true);
                 break;
         }
-        if (!hasConsumed) {
+        if (!isEOF && !hasConsumed) {
             // Re-process the current character if the state changed
             // and previous consumer didn't consume it!
             goto CONSUMER;
@@ -625,6 +636,7 @@ std::vector<Token> tokenize(const std::string &source) {
             currentState != TokenizerState::STATE_NONE &&
             !word.empty() &&
             prev_c != '\n') {
+            isEOF = true;
             c = '\n';
             // Trigger final processing for the remaining token
             goto CONSUMER;
