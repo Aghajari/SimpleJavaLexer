@@ -144,6 +144,11 @@ void test_others() {
     assertLexer("Annotation", "@Test", {
             Token(TokenType::ANNOTATION, "@Test"),
     });
+    assertLexer("Double Colon", "a::b", {
+            Token(TokenType::IDENTIFIER, "a"),
+            Token(TokenType::SYMBOL, "::"),
+            Token(TokenType::IDENTIFIER, "b"),
+    });
     assertLexer("Invalid characters", "a + #", {
             Token(TokenType::IDENTIFIER, "a"),
             Token(TokenType::OPERATOR, "+"),
