@@ -1,7 +1,11 @@
 #include <iostream>
+#include "assert_lexer.h"
 #include "../include/lexer.h"
 
 int main() {
+    test_lexer();
+    printf("-------\n");
+
     std::string source_code = R"(
         package test;
         import java;

@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(
         SimpleJavaLexer
         test/test_lexer.cpp
+        test/assert_lexer.cpp
+        test/assert_lexer.h
         include/token.h
         src/lexer.cpp
         include/lexer.h

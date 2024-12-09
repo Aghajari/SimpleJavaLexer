@@ -53,6 +53,13 @@ public:
         this->position.index -= (int) indexOffset;
     }
 
+    Token(
+            TokenType type,
+            std::string lex
+    ) : type(type),
+        lexeme(std::move(lex)),
+        position({-1}) {}
+
     /**
      * Returns the name of the token type as a string.
      * @return A string representing the token type.
@@ -91,6 +98,12 @@ public:
     }
 
     friend std::ostream &operator<<(std::ostream &strm, const Token &token) {
+        if (token.position.index == -1) {
+            return strm << "Token{Type: " << token.getTokenTypeName()
+                        << ", Lexeme: '" << token.lexeme
+                        << "'}";
+        }
+
         return strm << "Token{Type: " << token.getTokenTypeName()
                     << ", Position: " << token.position.line
                     << ":" << token.position.column
